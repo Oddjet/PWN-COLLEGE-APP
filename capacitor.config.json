@@ -7,5 +7,9 @@
     "allowMixedContent": true,
     "captureInput": true,
     "webContentsDebuggingEnabled": false
+  },
+  "server": {
+    "url": "https://pwn.college",
+    "cleartext": true
   }
 }
