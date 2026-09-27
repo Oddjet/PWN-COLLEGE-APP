@@ -21,13 +21,38 @@ jobs:
         run: |
           npm install @capacitor/core @capacitor/android @capacitor/cli
           
-      - name: Create www folder and index.html
+      # THIS IS THE FIX: We are removing the iframe wrapper completely.
+      # Instead, we create a dummy HTML file so Capacitor doesn't crash during init.
+      - name: Create minimal www directory
         run: |
           mkdir -p www
-          echo '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Pwn College</title></head><body style="margin:0;padding:0;"><iframe src="https://pwn.college" style="width:100vw;height:100vh;border:none;"></iframe></body></html>' > www/index.html
+          echo "<html><body>App Starting...</body></html>" > www/index.html
 
       - name: Initialize Capacitor
         run: npx cap init "Pwn College" com.pwn.college.app --web-dir=www
+
+      # CRITICAL STEP: Inject the Server Config directly into capacitor.config.json
+      # This forces the app to load https://pwn.college directly (like a browser tab)
+      # instead of looking at our local dummy file.
+      - name: Configure Direct URL Loading
+        run: |
+          cat <<EOF > capacitor.config.json
+          {
+            "appId": "com.pwn.college.app",
+            "appName": "Pwn College",
+            "webDir": "www",
+            "bundledWebRuntime": false,
+            "android": {
+              "allowMixedContent": true,
+              "captureInput": true,
+              "webContentsDebuggingEnabled": false
+            },
+            "server": {
+              "url": "https://pwn.college",
+              "cleartext": true
+            }
+          }
+          EOF
 
       - name: Add Android Platform
         run: npx cap add android
@@ -43,5 +68,5 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: pwn-college-apk
+          name: pwn-college-apk-fixed
           path: android/app/build/outputs/apk/debug/app-debug.apk
