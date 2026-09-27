@@ -1,0 +1,11 @@
+{
+  "appId": "com.pwn.college.app",
+  "appName": "Pwn College",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  }
+}
