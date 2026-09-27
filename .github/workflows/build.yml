@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android APK with Cyberpunk UI
 
 on:
   push:
@@ -21,8 +21,6 @@ jobs:
         run: |
           npm install @capacitor/core @capacitor/android @capacitor/cli
           
-      # THIS IS THE FIX: We are removing the iframe wrapper completely.
-      # Instead, we create a dummy HTML file so Capacitor doesn't crash during init.
       - name: Create minimal www directory
         run: |
           mkdir -p www
@@ -31,9 +29,6 @@ jobs:
       - name: Initialize Capacitor
         run: npx cap init "Pwn College" com.pwn.college.app --web-dir=www
 
-      # CRITICAL STEP: Inject the Server Config directly into capacitor.config.json
-      # This forces the app to load https://pwn.college directly (like a browser tab)
-      # instead of looking at our local dummy file.
       - name: Configure Direct URL Loading
         run: |
           cat <<EOF > capacitor.config.json
@@ -57,6 +52,91 @@ jobs:
       - name: Add Android Platform
         run: npx cap add android
 
+      # --- THE CYBERPUNK PATCH ---
+      - name: Patch MainActivity for Cyberpunk UI
+        run: |
+          cd android/app/src/main/java/com/pwn/college/app
+          
+          # Backup original file
+          cp MainActivity.java MainActivity.java.bak
+          
+          # Overwrite with Cyberpunk Injection Logic
+          cat <<'JAVA_EOF' > MainActivity.java
+          package com.pwn.college.app;
+
+          import android.os.Bundle;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+            @Override
+            protected void onCreate(Bundle savedInstanceState) {
+              super.onCreate(savedInstanceState);
+              
+              WebView webView = bridge.getWebView();
+              
+              webView.setWebViewClient(new WebViewClient() {
+                @Override
+                public void onPageFinished(WebView view, String url) {
+                  super.onPageFinished(view, url);
+                  
+                  // INJECT MASSIVE CSS OVERRIDES TO FORCE THE LOOK
+                  String cssInjection = 
+                    "javascript:(function() {" +
+                    
+                    /* 1. GLOBAL RESET & THEME */
+                    "var style = document.createElement('style');" +
+                    "style.innerHTML = '" +
+                    
+                    /* Backgrounds & Colors */
+                    "body, html, div, nav, header, footer, main, article, aside, section { background-color: #050505 !important; color: #e0e0e0 !important; font-family: 'Courier New', monospace !important; border-radius: 0 !important; box-shadow: none !important; }" +
+                    
+                    /* Borders - The 'Grid' Look */
+                    "* { border-color: #00ffff !important; outline: none !important; }" +
+                    ".card, .panel, .box, [class*=container], [class*=wrapper] { border: 1px solid #00ffff !important; margin-bottom: 10px !important; padding: 10px !important; position: relative !important; }" +
+                    
+                    /* Headers & Titles */
+                    "h1, h2, h3, h4, h5, h6 { color: #ff3333 !important; text-transform: uppercase !important; letter-spacing: 2px !important; border-bottom: 2px solid #00ffff !important; padding-bottom: 5px !important; margin-top: 15px !important; }" +
+                    
+                    /* Buttons - Sharp & Glowing */
+                    "button, .btn, input[type=submit], a.btn { background: transparent !important; border: 1px solid #00ffff !important; color: #00ffff !important; text-transform: uppercase !important; font-weight: bold !important; padding: 10px 20px !important; transition: all 0.3s ease !important; clip-path: polygon(10% 0, 100% 0, 100% 90%, 90% 100%, 0 100%, 0 10%) !important; }" +
+                    "button:hover, .btn:hover { background: #00ffff !important; color: #000 !important; box-shadow: 0 0 15px #00ffff !important; }" +
+                    
+                    /* Inputs & Text Areas */
+                    "input, textarea, select { background: #111 !important; border: 1px solid #00ffff !important; color: #fff !important; font-family: monospace !important; width: 100% !important; box-sizing: border-box !important; }" +
+                    "input:focus, textarea:focus { border-color: #ff3333 !important; box-shadow: 0 0 10px rgba(255, 51, 51, 0.5) !important; }" +
+                    
+                    /* Links */
+                    "a { color: #00ffff !important; text-decoration: underline dotted !important; }" +
+                    "a:hover { color: #ff3333 !important; }" +
+                    
+                    /* Tables (Challenge lists often use tables) */
+                    "table { width: 100% !important; border-collapse: collapse !important; margin: 10px 0 !important; }" +
+                    "th, td { border: 1px solid #00ffff !important; padding: 8px !important; text-align: left !important; }" +
+                    "th { background: #002222 !important; color: #00ffff !important; text-transform: uppercase !important; }" +
+                    "tr:nth-child(even) { background: #0a0a0a !important; }" +
+                    
+                    /* Scrollbars */
+                    "::-webkit-scrollbar { width: 8px !important; height: 8px !important; }" +
+                    "::-webkit-scrollbar-track { background: #000 !important; }" +
+                    "::-webkit-scrollbar-thumb { background: #00ffff !important; border-radius: 0 !important; }" +
+                    
+                    /* Specific Fixes for common elements if they exist */
+                    "#navbar, .top-bar, .header-menu { background: #000 !important; border-bottom: 2px solid #ff3333 !important; }" +
+                    
+                    "';" +
+                    "document.head.appendChild(style);" +
+                    
+                    "})();";
+                  
+                  view.loadUrl(cssInjection);
+                }
+              });
+            }
+          }
+          JAVA_EOF
+
       - name: Sync Capacitor
         run: npx cap sync
 
@@ -68,5 +148,5 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: pwn-college-apk-fixed
+          name: pwn-college-cyberpunk-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
